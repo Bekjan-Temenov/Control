@@ -2,10 +2,9 @@
 import Sidebar from './components/Sidebar.vue';
 </script>
 <template>
-  <div class="flex items-start border mx-auto gap-2 max-w-[1200px]">
+  <div class="flex h-screen items-start  border mx-auto gap-2 max-w-[80%]">
     <Sidebar/>
-    <div class="w-full">
-
+    <div class="w-full max-h-screen">
     <router-view></router-view>
     </div>
   </div>
