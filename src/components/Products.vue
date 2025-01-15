@@ -46,7 +46,6 @@ export default {
     },
   },
   async mounted() {
-    console.log("Компонент смонтирован");
     await this.fetchProducts();
   },
   methods: {
@@ -54,7 +53,6 @@ export default {
       try {
         const response = await getProducts();
         this.products = Array.isArray(response) ? response : [];
-        console.log(this.products);
       } catch (error) {
         console.error("Ошибка получения продуктов:", error);
         this.products = [];
@@ -67,7 +65,6 @@ export default {
         }
         if (this.editIndex === null) {
           const response = await postProduct(this.form);
-          console.log("Данные с сервера:", response);
           this.products.push(response.data);
           await this.fetchProducts();
         } else {

@@ -55,7 +55,6 @@ export default {
     try {
       const response = await getWherehouses();
       this.wherehouse = Array.isArray(response) ? response : [];
-      console.log(this.wherehouse);
     } catch (error) {
       console.error("Ошибка получения продуктов:", error);
     }

@@ -1,1 +1,1 @@
-export const apiUrl = "https://shumsale.com:3443/api";
+export const apiUrl = "http://localhost:3000/api";
