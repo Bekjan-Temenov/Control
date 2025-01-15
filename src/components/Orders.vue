@@ -10,9 +10,11 @@ import {
 } from "../store/orders";
 import { AnOutlinedEdit } from "@kalimahapps/vue-icons";
 import { FlDelete } from "@kalimahapps/vue-icons";
+import { AkCircleX } from "@kalimahapps/vue-icons";
+import ModalProduct from "./ModalProduct.vue";
 
 export default {
-  components: { Datepicker, AnOutlinedEdit, FlDelete },
+  components: { Datepicker, AnOutlinedEdit, FlDelete, ModalProduct, AkCircleX },
   data() {
     return {
       isModalOpen: false,
@@ -29,6 +31,8 @@ export default {
       isWarehouseValid: true,
       sortOrder: "asc",
       errorMessage: "",
+      openProductModal: false,
+      selectedOrderIndex: null,
     };
   },
   computed: {
@@ -63,7 +67,7 @@ export default {
           fetchWarehouses(),
           fetchProducts(),
         ]);
-        console.log("sales", this.sales);
+        console.log(this.products);
       } catch (error) {
         this.errorMessage = "Ошибка загрузки данных.";
         console.error(error.message);
@@ -95,7 +99,6 @@ export default {
         })),
       };
 
-
       try {
         if (saleData.id) {
           const updatedSale = await updateSale({
@@ -108,8 +111,8 @@ export default {
             this.sales.splice(index, 1, {
               ...this.sales[index],
               ...formattedData,
-              id: saleData.id, 
-              warehouse: warehouse.name, 
+              id: saleData.id,
+              warehouse: warehouse.name,
             });
           }
         } else {
@@ -210,6 +213,17 @@ export default {
     toggleSortOrder() {
       this.sortOrder = this.sortOrder === "asc" ? "desc" : "asc";
     },
+    openProduct() {
+      this.selectedOrderIndex = index;
+      this.openProductModal = true;
+    },
+    closeProduct() {
+      this.openProductModal = false;
+    },
+    selectsedIndex() {
+      this.orders[this.selectedOrderIndex].product = productName;
+      this.closeProduct();
+    },
   },
   mounted() {
     this.loadInitialData();
@@ -272,7 +286,7 @@ export default {
           <tr v-for="(sale, index) in filterSearch" :key="index">
             <td class="px-4 py-2 border">{{ sale.date }}</td>
             <td class="px-4 py-2 border">
-              {{sale.warehouse_name }}
+              {{ sale.warehouse_name }}
             </td>
             <td class="px-4 py-2 border">{{ sale.total }}</td>
             <td
@@ -291,14 +305,14 @@ export default {
         </tbody>
       </table>
     </div>
-    
+
     <div
       v-if="isModalOpen"
       class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
     >
       <div class="w-[60%] p-6 bg-white rounded-xl shadow-xl">
-        <h2 class="mb-4 text-xl font-bold">Продажа товаров</h2>
-       
+        <h2 class="mb-4 text-xl font-bold">Продажа </h2>
+
         <div class="mb-4">
           <label class="block mb-2 text-gray-700">Склад:</label>
           <select
@@ -343,19 +357,26 @@ export default {
             <tbody>
               <tr v-for="(item, index) in currentSale.items" :key="index">
                 <td class="px-4 py-2 border">
-                  <select
-                    v-model="item.product"
-                    @change="updatePrice(index)"
-                    class="w-full px-3 py-2 border rounded"
+                  <button
+                    @click="openProduct"
+                    class="text-white bg-orange-400 rounded-lg"
                   >
-                    <option
-                      v-for="product in products"
-                      :key="product.id"
-                      :value="product.name"
-                    >
-                      {{ product.name }}
-                    </option>
-                  </select>
+                    выбрать
+                  </button>
+                  <div
+                    class="fixed inset-0 w-[60%] mx-auto bg-white w- bg-opaity-50 rounded-xl"
+                    v-if="openProduct"
+                  >
+                    <AkCircleX
+                      class="w-6 h-6 mt-6 ml-5 text-black cursor-pointer"
+                      @click="closeProduct"
+                    />
+
+                    <ModalProduct
+                      :products="products"
+                      @select-product="selectProduct"
+                    />
+                  </div>
                 </td>
                 <td class="px-4 py-2 border">
                   <input
