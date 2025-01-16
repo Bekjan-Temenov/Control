@@ -7,6 +7,8 @@ import {
   fetchProducts,
   fetchSaleById,
 } from "../store/orders";
+import { postWherehouse } from "../store/wherehouse.js";
+import { postProduct } from "../store/products.js";
 import { AnOutlinedEdit, FlDelete, AkCircleX } from "@kalimahapps/vue-icons";
 
 export default {
@@ -21,14 +23,20 @@ export default {
         date: new Date(),
         items: [],
       },
+      form: {
+        name: "",
+        code: "",
+      },
       errorMessage: "",
       searchQuery: "",
       searchProduct: "",
       sortOrder: "asc",
-      sortPoduct: "asc",
+      sortPoduct: "desc",
       isProductModalOpen: false,
       isModalOpen: false,
-      isEditMode: false, 
+      isEditMode: false,
+      modalProduct: false,
+      showModal: false,
     };
   },
   computed: {
@@ -54,11 +62,26 @@ export default {
       return filtered;
     },
     filteredProducts() {
-      return this.products.filter(
-        (product) =>
-          product.name.toLowerCase().includes(this.searchProduct.toLowerCase()) ||
-          product.code.toLowerCase().includes(this.searchProduct.toLowerCase())
-      );
+      return this.products
+        .filter(
+          (product) =>
+            product &&
+            product.name &&
+            product.code &&
+            (product.name
+              .toLowerCase()
+              .includes(this.searchProduct.toLowerCase()) ||
+              product.code
+                .toLowerCase()
+                .includes(this.searchProduct.toLowerCase()))
+        )
+        .sort((a, b) => {
+          if (this.sortPoduct === "asc") {
+            return a.id - b.id;
+          } else {
+            return b.id - a.id;
+          }
+        });
     },
   },
   methods: {
@@ -117,7 +140,7 @@ export default {
         } else {
           await createSale(formattedData, this);
         }
-        this.$router.push("/"); 
+        this.$router.push("/");
       } catch (error) {
         this.errorMessage = "Ошибка при сохранении продажи.";
         console.error(error.message);
@@ -129,18 +152,35 @@ export default {
       );
       return product ? product.id : null;
     },
-    toggleSortProduct() {
-      this.sortPoduct = this.sortPoduct === "asc" ? "desc" : "asc";
-      this.products.sort((a, b) => {
-        const nameA = a.name.toLowerCase();
-        const nameB = b.name.toLowerCase();
-        if (this.sortPoduct === "asc") {
-          return nameA < nameB ? -1 : nameA > nameB ? 1 : 0;
-        } else {
-          return nameA > nameB ? -1 : nameA < nameB ? 1 : 0;
-        }
-      });
+
+    async saveWherehouses() {
+      try {
+        const response = await postWherehouse(this.form);
+        this.warehouses.push(response.data);
+        this.closeWherehouseModal();
+        await this.loadInitialData();
+      } catch (error) {
+        console.error("Ошибка сохранения продукта:", error);
+      }
     },
+    async saveProducts() {
+      try {
+        const response = await postProduct(this.form);
+        this.products.push(response.data);
+        this.closeModalProduct();
+        await this.loadProductsData();
+      } catch (error) {
+        console.error("Ошибка сохранения продукта:", error);
+      }
+    },
+    async loadProductsData() {
+      try {
+        this.products = await fetchProducts();
+      } catch (error) {
+        console.error("Ошибка загрузки продуктов:", error);
+      }
+    },
+
     selectProduct(index, product) {
       this.currentSale.items[index].product = product.name;
       this.openProductModal[index] = false;
@@ -154,6 +194,9 @@ export default {
     toggleSortOrder() {
       this.sortOrder = this.sortOrder === "asc" ? "desc" : "asc";
     },
+    toggleSortProduct() {
+      this.sortPoduct = this.sortPoduct === "asc" ? "desc" : "asc";
+    },
     updateSum(index) {
       const item = this.currentSale.items[index];
       item.sum = item.quantity * item.price;
@@ -163,6 +206,21 @@ export default {
       this.currentSale.warehouse = warehouse.name;
       this.isModalOpen = false;
     },
+    openWherehouseModal() {
+      this.showModal = true;
+      this.form = { name: "", code: "" };
+    },
+    closeWherehouseModal() {
+      this.showModal = false;
+    },
+    openModalProduct() {
+      this.modalProduct = true;
+      this.form = { name: "", code: "" };
+    },
+    closeModalProduct(index) {
+      this.modalProduct = false;
+      this.openProductModal[index] = true;
+    },
   },
   mounted() {
     this.loadInitialData();
@@ -171,7 +229,7 @@ export default {
 </script>
 
 <template>
-  <div class="h-screen p-4">
+  <div class="z-10 h-screen p-4">
     <h1 class="mb-4 text-xl font-bold">
       {{ isEditMode ? "Редактирование продажи" : "Создание новой продажи" }}
     </h1>
@@ -187,68 +245,120 @@ export default {
 
       <div
         v-if="isModalOpen"
-        class="fixed inset-0 flex items-center justify-center py-5 bg-black bg-opacity-50"
+        class="fixed inset-0 flex flex-col items-center justify-center py-5 bg-black bg-opacity-50"
       >
         <div
           class="h-full flex overflow-y-auto flex-col gap-5 p-3 my-3 bg-white rounded-lg w-[60%]"
         >
-          <div class="flex items-center justify-between gap-3 my-3">
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Поиск (Ctrl+F)"
-              class="w-full px-3 py-2 border rounded focus:outline-none focus:ring"
-            />
-            <button
-              @click="toggleSortOrder"
-              class="flex items-center px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-            >
-              <span>Сортировка</span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                :class="{ 'transform rotate-180': sortOrder === 'desc' }"
-                class="w-5 h-5 ml-2 transition-transform"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+          <div class="flex flex-col gap-5">
+            <div class="flex items-center justify-between gap-3 my-3">
+              <input
+                v-model="searchQuery"
+                type="text"
+                placeholder="Поиск (Ctrl+F)"
+                class="w-full px-3 py-2 border rounded focus:outline-none focus:ring"
+              />
+              <button
+                @click="toggleSortOrder"
+                class="flex items-center px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M5 15l7-7 7 7"
-                />
-              </svg>
+                <span>Сортировка</span>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  :class="{ 'transform rotate-180': sortOrder === 'desc' }"
+                  class="w-5 h-5 ml-2 transition-transform"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 15l7-7 7 7"
+                  />
+                </svg>
+              </button>
+              <button
+                @click="openWherehouseModal"
+                class="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600"
+              >
+                Создать
+              </button>
+            </div>
+
+            <table class="w-full border border-gray-200 table-auto">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="px-4 py-2 border">Наименование</th>
+                  <th class="px-4 py-2 border">Код</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="warehouse in filteredWherehouse"
+                  :key="warehouse.id"
+                  @click="selectWarehouse(warehouse)"
+                  class="cursor-pointer hover:bg-gray-200"
+                >
+                  <td class="px-4 py-2 border">{{ warehouse.name }}</td>
+                  <td class="px-4 py-2 border">{{ warehouse.code }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <button
+              @click="isModalOpen = false"
+              type="button"
+              class="px-4 py-2 text-white w-[20%] bg-gray-500 rounded hover:bg-gray-600"
+            >
+              Отмена
             </button>
           </div>
-
-          <table class="w-full border border-gray-200 table-auto">
-            <thead class="bg-gray-100">
-              <tr>
-                <th class="px-4 py-2 border">Наименование</th>
-                <th class="px-4 py-2 border">Код</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="warehouse in filteredWherehouse"
-                :key="warehouse.id"
-                @click="selectWarehouse(warehouse)"
-                class="cursor-pointer hover:bg-gray-200"
-              >
-                <td class="px-4 py-2 border">{{ warehouse.name }}</td>
-                <td class="px-4 py-2 border">{{ warehouse.code }}</td>
-              </tr>
-            </tbody>
-          </table>
-          <button
-            @click="isModalOpen = false"
-            type="button"
-            class="px-4 py-2 text-white w-[20%] bg-gray-500 rounded hover:bg-gray-600"
-          >
-            Отмена
-          </button>
         </div>
+      </div>
+    </div>
+
+    <div
+      v-if="showModal"
+      class="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50"
+    >
+      <div class="p-6 bg-white rounded shadow-lg w-96">
+        <h2 class="mb-4 text-lg font-bold">Создать cклад</h2>
+        <form @submit.prevent="saveWherehouses">
+          <div class="mb-4">
+            <label class="block text-gray-700">Наименование</label>
+            <input
+              v-model="form.name"
+              type="text"
+              class="w-full px-3 py-2 border rounded focus:outline-none focus:ring"
+              placeholder="Введите наименование"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700">Код</label>
+            <input
+              v-model="form.code"
+              type="text"
+              class="w-full px-3 py-2 border rounded focus:outline-none focus:ring"
+              placeholder="Введите код"
+            />
+          </div>
+          <div class="flex justify-end space-x-2">
+            <button
+              @click="closeWherehouseModal"
+              type="button"
+              class="px-4 py-2 text-white bg-gray-500 rounded hover:bg-gray-600"
+            >
+              Отмена
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600"
+            >
+              Сохранить
+            </button>
+          </div>
+        </form>
       </div>
     </div>
 
@@ -280,7 +390,7 @@ export default {
               <div class="mb-4">
                 <button
                   @click="openProductModal[index] = true"
-                  class="px-1 py-1 rounded-lg "
+                  class="px-1 py-1 rounded-lg"
                 >
                   {{ item.product || "Выбрать " }}
                 </button>
@@ -321,6 +431,12 @@ export default {
                           />
                         </svg>
                       </button>
+                      <button
+                        @click="openModalProduct"
+                        class="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600"
+                      >
+                        Создать
+                      </button>
                     </div>
                     <table class="w-full border border-gray-200 table-auto">
                       <thead class="bg-gray-100">
@@ -333,7 +449,7 @@ export default {
                         <tr
                           v-for="product in filteredProducts"
                           :key="product.id"
-                          @click="selectProduct(index, product)"
+                          @click="index, product"
                           class="cursor-pointer hover:bg-gray-200"
                         >
                           <td class="px-4 py-2 border">{{ product.name }}</td>
@@ -350,8 +466,52 @@ export default {
                     </button>
                   </div>
                 </div>
+                <div
+                  v-if="modalProduct"
+                  class="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50"
+                >
+                  <div class="p-6 bg-white rounded shadow-lg w-96">
+                    <h2 class="mb-4 text-lg font-bold">Создать продукт</h2>
+                    <form @submit.prevent="saveProducts">
+                      <div class="mb-4">
+                        <label class="block text-gray-700">Наименование</label>
+                        <input
+                          v-model="form.name"
+                          type="text"
+                          class="w-full px-3 py-2 border rounded focus:outline-none focus:ring"
+                          placeholder="Введите наименование"
+                        />
+                      </div>
+                      <div class="mb-4">
+                        <label class="block text-gray-700">Код</label>
+                        <input
+                          v-model="form.code"
+                          type="text"
+                          class="w-full px-3 py-2 border rounded focus:outline-none focus:ring"
+                          placeholder="Введите код"
+                        />
+                      </div>
+                      <div class="flex justify-end space-x-2">
+                        <button
+                          @click="closeModalProduct"
+                          type="button"
+                          class="px-4 py-2 text-white bg-gray-500 rounded hover:bg-gray-600"
+                        >
+                          Отмена
+                        </button>
+                        <button
+                          type="submit"
+                          class="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600"
+                        >
+                          Сохранить
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
               </div>
             </td>
+
             <td class="px-4 py-2 border">
               <input
                 v-model.number="item.quantity"
