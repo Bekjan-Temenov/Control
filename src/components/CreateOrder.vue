@@ -116,9 +116,11 @@ export default {
     },
     async saveSale() {
       const saleData = { ...this.currentSale };
+      console.log("currentSale", this.currentSale);
       const warehouse = this.warehouses.find(
         (wh) => wh.name.toLowerCase() === saleData.warehouse.toLowerCase()
       );
+      console.log(warehouse);
 
       const formattedData = {
         wherehouses_id: warehouse.id,
@@ -137,6 +139,7 @@ export default {
       try {
         if (this.isEditMode === true) {
           await updateSale({ ...formattedData, id: saleData.sale_id });
+          console.log(this.currentSale);
         } else {
           await createSale(formattedData, this);
         }
@@ -181,10 +184,6 @@ export default {
       }
     },
 
-    selectProduct(index, product) {
-      this.currentSale.items[index].product = product.name;
-      this.openProductModal[index] = false;
-    },
     addItem() {
       this.currentSale.items.push({ product: "", quantity: 1, price: 0 });
     },
@@ -202,10 +201,7 @@ export default {
       item.sum = item.quantity * item.price;
     },
 
-    selectWarehouse(warehouse) {
-      this.currentSale.warehouse = warehouse.name;
-      this.isModalOpen = false;
-    },
+    
     openWherehouseModal() {
       this.showModal = true;
       this.form = { name: "", code: "" };
@@ -220,6 +216,15 @@ export default {
     closeModalProduct(index) {
       this.modalProduct = false;
       this.openProductModal[index] = true;
+    },
+    selectWarehouse(warehouse) {
+      this.currentSale.warehouse = warehouse.name;
+      this.isModalOpen = false;
+    },
+
+    selectProduct(index, product) {
+      this.currentSale.items[index].product = product.name;
+      this.openProductModal[index] = false;
     },
   },
   mounted() {
@@ -392,7 +397,7 @@ export default {
                   @click="openProductModal[index] = true"
                   class="px-1 py-1 rounded-lg"
                 >
-                  {{ item.product || "Выбрать " }}
+                  {{ item.product || "Выбрать" }}
                 </button>
                 <div
                   v-if="openProductModal[index]"
@@ -449,7 +454,7 @@ export default {
                         <tr
                           v-for="product in filteredProducts"
                           :key="product.id"
-                          @click="index, product"
+                          @click="selectProduct(index, product)"
                           class="cursor-pointer hover:bg-gray-200"
                         >
                           <td class="px-4 py-2 border">{{ product.name }}</td>
