@@ -236,9 +236,7 @@ export default {
       const selectedItem = this.currentSale.items[index];
       selectedItem.product = product.name;
       selectedItem.products_id = product.id;
-      if (!selectedItem.price || selectedItem.price === 0) {
-        selectedItem.price = product.price;
-      }
+      selectedItem.price = product.price; 
       this.openProductModal[index] = false;
     },
   },
