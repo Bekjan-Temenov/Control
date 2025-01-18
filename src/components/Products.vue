@@ -21,6 +21,7 @@ export default {
       form: {
         name: "",
         code: "",
+        price:""
       },
       editIndex: null, 
     };
@@ -214,6 +215,15 @@ export default {
               type="text"
               class="w-full px-3 py-2 border rounded focus:outline-none focus:ring"
               placeholder="Введите код"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-gray-700">Цена</label>
+            <input
+              v-model="form.price"
+              type="text"
+              class="w-full px-3 py-2 border rounded focus:outline-none focus:ring"
+              placeholder="Введите цену"
             />
           </div>
           <div class="flex justify-end space-x-2">

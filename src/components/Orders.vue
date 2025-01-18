@@ -44,7 +44,6 @@ export default {
     async loadInitialData() {
       try {
         this.sales = await fetchSales();
-        console.log(this.sales);
       } catch (error) {
         this.errorMessage = "Ошибка загрузки данных.";
         console.error(error.message);

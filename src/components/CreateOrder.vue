@@ -116,21 +116,25 @@ export default {
     },
     async saveSale() {
       const saleData = { ...this.currentSale };
-      console.log("currentSale", this.currentSale);
-      const warehouse = this.warehouses.find(
-        (wh) => wh.name.toLowerCase() === saleData.warehouse.toLowerCase()
-      );
-      console.log(warehouse);
+
+      const warehouse = this.warehouses.find((wh) => {
+        const warehouseName = saleData.warehouse || saleData.warehouse_name;
+        return (
+          warehouseName &&
+          wh.name &&
+          wh.name.toLowerCase() === warehouseName.toLowerCase()
+        );
+      });
 
       const formattedData = {
-        wherehouses_id: warehouse.id,
+        wherehouses_id: warehouse ? warehouse.id : saleData.wherehouses_id,
         date: new Date(saleData.date).toISOString().split("T")[0],
         total: saleData.items.reduce(
           (sum, item) => sum + item.quantity * item.price,
           0
         ),
         items: saleData.items.map((item) => ({
-          products_id: this.getProductIdByName(item.product),
+          products_id: this.getProductIdByName(item.product) || item.product_id,
           quantity: item.quantity,
           price: item.price,
         })),
@@ -139,7 +143,6 @@ export default {
       try {
         if (this.isEditMode === true) {
           await updateSale({ ...formattedData, id: saleData.sale_id });
-          console.log(this.currentSale);
         } else {
           await createSale(formattedData, this);
         }
@@ -151,7 +154,10 @@ export default {
     },
     getProductIdByName(productName) {
       const product = this.products.find(
-        (p) => p.name.toLowerCase() === productName.toLowerCase()
+        (p) =>
+          p.name &&
+          productName &&
+          p.name.toLowerCase() === productName.toLowerCase()
       );
       return product ? product.id : null;
     },
@@ -184,8 +190,13 @@ export default {
       }
     },
 
-    addItem() {
-      this.currentSale.items.push({ product: "", quantity: 1, price: 0 });
+    addItem(product = null) {
+      this.currentSale.items.push({
+        product: product ? product.name : "",
+        quantity: 1,
+        price: product ? product.price : 0,
+        products_id: product ? product.id : null,
+      });
     },
     removeItem(index) {
       this.currentSale.items.splice(index, 1);
@@ -201,7 +212,6 @@ export default {
       item.sum = item.quantity * item.price;
     },
 
-    
     openWherehouseModal() {
       this.showModal = true;
       this.form = { name: "", code: "" };
@@ -223,7 +233,12 @@ export default {
     },
 
     selectProduct(index, product) {
-      this.currentSale.items[index].product = product.name;
+      const selectedItem = this.currentSale.items[index];
+      selectedItem.product = product.name;
+      selectedItem.products_id = product.id;
+      if (!selectedItem.price || selectedItem.price === 0) {
+        selectedItem.price = product.price;
+      }
       this.openProductModal[index] = false;
     },
   },
@@ -245,7 +260,9 @@ export default {
         @click="isModalOpen = true"
         class="px-4 py-1 border-b border-black text-md"
       >
-        {{ currentSale.warehouse || "Выбрать склад" }}
+        {{
+          currentSale.warehouse || currentSale.warehouse_name || "Выбрать склад"
+        }}
       </button>
 
       <div
@@ -397,7 +414,7 @@ export default {
                   @click="openProductModal[index] = true"
                   class="px-1 py-1 rounded-lg"
                 >
-                  {{ item.product || "Выбрать" }}
+                  {{ item.product || item.product_name || "Выбрать" }}
                 </button>
                 <div
                   v-if="openProductModal[index]"
@@ -538,7 +555,7 @@ export default {
               />
             </td>
             <td class="px-4 py-2 border">
-              {{ item.sum || item.quantity * item.price }}
+              {{ (item.sum || item.quantity * item.price).toFixed(2) }}
             </td>
             <td class="px-4 py-2 border">
               <button
