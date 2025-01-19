@@ -114,6 +114,10 @@ export default {
         console.error(error.message);
       }
     },
+
+    totalPrice(items) {
+      return items.reduce((sum, item) => sum + item.quantity * item.price, 0);
+    },
     async saveSale() {
       const saleData = { ...this.currentSale };
 
@@ -236,7 +240,7 @@ export default {
       const selectedItem = this.currentSale.items[index];
       selectedItem.product = product.name;
       selectedItem.products_id = product.id;
-      selectedItem.price = product.price; 
+      selectedItem.price = product.price;
       this.openProductModal[index] = false;
     },
   },
@@ -462,6 +466,7 @@ export default {
                       <thead class="bg-gray-100">
                         <tr>
                           <th class="px-4 py-2 border">Товар</th>
+                          <th class="px-4 py-2 border">Цена</th>
                           <th class="px-4 py-2 border">Код</th>
                         </tr>
                       </thead>
@@ -473,6 +478,7 @@ export default {
                           class="cursor-pointer hover:bg-gray-200"
                         >
                           <td class="px-4 py-2 border">{{ product.name }}</td>
+                          <td class="px-4 py-2 border">{{ product.price }}</td>
                           <td class="px-4 py-2 border">{{ product.code }}</td>
                         </tr>
                       </tbody>
@@ -566,12 +572,18 @@ export default {
           </tr>
         </tbody>
       </table>
-      <button
-        @click="addItem"
-        class="px-4 py-2 mt-2 text-white bg-blue-500 rounded"
-      >
-        Добавить товар
-      </button>
+      <div class="flex items-center justify-between">
+        <button
+          @click="addItem"
+          class="px-4 py-2 mt-2 text-white bg-blue-500 rounded"
+        >
+          Добавить товар
+        </button>
+        <div class="flex flex-col gap-1">
+          <p>Итоговая сумма</p>
+          <h1 class="font-bold">{{ totalPrice(currentSale.items) }} ₽</h1>
+        </div>
+      </div>
     </div>
 
     <div class="flex justify-end">

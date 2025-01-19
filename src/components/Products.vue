@@ -153,7 +153,8 @@ export default {
         <thead class="bg-gray-100">
           <tr>
             <th class="py-2 text-left border px-[140px]">Наименование</th>
-            <th class="px-4 py-2 text-left border">
+            <th class="py-2 text-left border px-9">Цена</th>
+            <th class="px-2 py-2 text-left border">
               Код
               <button @click="toggleSortOrder" class="ml-2 text-gray-500">
                 ⬆⬇
@@ -169,6 +170,7 @@ export default {
             class="hover:bg-gray-50"
           >
             <td class="px-4 py-2 border">{{ product.name }}</td>
+            <td class="px-4 py-2 border">{{ product.price }} </td>
             <td class="px-4 py-2 border">{{ product.code }}</td>
             <td class="px-4 py-2 text-center border">
               <button
@@ -208,6 +210,7 @@ export default {
               placeholder="Введите наименование"
             />
           </div>
+          
           <div class="mb-4">
             <label class="block text-gray-700">Код</label>
             <input
